@@ -1,0 +1,91 @@
+---
+- name: App Infrastructure Provisioned on AWS
+  hosts: localhost
+  module_defaults:
+    group/aws:
+      aws_profile: default
+  # vars:
+  #   keypair_name: roysahar-ansible-keypair
+  
+  tasks:
+    - name: Keypair exists
+      amazon.aws.ec2_key:
+        name: roysahar-ansible-keypair
+        file_name: ~/.ssh/roysahar-ansible-keypair
+
+    - name: Web server provisioned on AWS
+      amazon.aws.ec2_instance:
+        name: roysahar-CICDFinalExe-webserver
+        key_name: roysahar-ansible-keypair
+        vpc_subnet_id: subnet-07d6bb7b15ccc8452
+        instance_type: t2.medium
+        security_group: sg-053cc618d97b86596
+        network:
+          assign_public_ip: true
+        image_id: ami-0c7af5fe939f2677f
+        tags:
+          Owner: roysahar
+        state: running
+      register: ec2_result
+
+    # - name: debug
+    #   debug:
+    #     var: ec2_result.instances
+    
+    - name: Instance's public IP is in the inventory and in the host group
+      add_host:
+        hostname: "{{ item.public_ip_address }}"
+        groups: webservers
+      loop: "{{ ec2_result.instances }}"
+
+
+- name: Web Server Setup
+  hosts: webservers
+  become: true
+  vars:
+    ansible_ssh_private_key_file: ~/.ssh/roysahar-ansible-keypair
+  
+  tasks:
+    - name: epel, python, pip, git, and yum-utils are installed
+      dnf:
+        name:
+          # - epel-release
+          - python3
+          - python-pip
+          - git
+          - yum-utils
+          - dnf-plugins-core
+        state: present
+    
+    # - name: docker-ce repo exists
+    #   yum_repository:
+    #     name: docker-ce
+    #     description: Docker packages repository
+    #     baseurl: https://download.docker.com/linux/rhel/docker-ce.repo
+      
+    - name: docker-ce repo download
+      shell: dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+    
+    - name: Docker packages are installed
+      dnf:
+        name: 
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+    
+    - name: Docker is started and enabled
+      service:
+        name: docker
+        state: started
+        enabled: true
+    
+    - name: app directory exists
+      file:
+        path: /app
+        state: directory
+
+    - name: App repo is cloned
+      git:
+        repo: https://github.com/roysahar11/CICDFinal.git
+        dest: /app
