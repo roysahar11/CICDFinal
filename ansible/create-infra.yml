@@ -88,4 +88,33 @@
     - name: App repo is cloned
       git:
         repo: https://github.com/roysahar11/CICDFinal.git
-        dest: /app
+        dest: /minecraft_CICD
+
+    - name: Build docker image
+      community.docker.docker_image:
+        name: roysahar-ecr/minecraft_server
+        build:
+          path: /minecraft_CICD
+        source: build
+        force_source: true
+        # push: true
+    
+    # - name: install AWS CLI
+    #   command: curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    # - command: unzip awscliv2.zip
+    # - command: sudo ./aws/install
+
+    - name: AWS CLI is installed
+      dnf:
+        name: awscli
+
+    - name: copy aws credentials
+      copy:
+        src: "~/.aws/credentials"
+        dest: "~/.aws/"
+    
+    # - name: Tag image
+    #   command: docker tag minecraft_server roysahar11/roysahar-cicd-final-exe:latest
+    - shell: "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 992382545251.dkr.ecr.us-east-1.amazonaws.com"
+    - command: "docker tag roysahar-ecr/minecraft_server:latest 992382545251.dkr.ecr.us-east-1.amazonaws.com/roysahar-ecr/minecraft_server:latest"
+    - command: "docker push 992382545251.dkr.ecr.us-east-1.amazonaws.com/roysahar-ecr/minecraft_server:latest"
