@@ -82,7 +82,7 @@
     
     - name: app directory exists
       file:
-        path: /app
+        path: /minecraft_CICD
         state: directory
 
     - name: App repo is cloned
