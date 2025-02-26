@@ -1,0 +1,23 @@
+---
+- name: App Infrastructure Destroyed
+  hosts: localhost
+  module_defaults:
+    group/aws:
+      aws_profile: default
+
+  tasks:
+  - name: Gather Web Instance EC2 Facts.
+    amazon.aws.ec2_instance_info:
+      # region: "{{ region }}"
+      filters:
+        "tag:Name": "roysahar-CICDFinalExe-webserver"
+      # aws_access_key: "{{ ec2_access_key }}"
+      # aws_secret_key: "{{ ec2_secret_key }}"
+    register: ec2_instances
+
+  - name: Server EC2 instance terminated
+    amazon.aws.ec2_instance:
+      instance_ids: "{{ item.instance_id }}"
+      state: absent
+      # region: "{{ region }}"
+    loop: "{{ ec2_instances.instances }}"

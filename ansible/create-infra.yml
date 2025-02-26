@@ -16,6 +16,7 @@
     - name: Web server provisioned on AWS
       amazon.aws.ec2_instance:
         name: roysahar-CICDFinalExe-webserver
+        exact_count: 1
         key_name: roysahar-ansible-keypair
         vpc_subnet_id: subnet-07d6bb7b15ccc8452
         instance_type: t2.medium
@@ -108,13 +109,31 @@
       dnf:
         name: awscli
 
-    - name: copy aws credentials
+    - name: AWS credentials exist
       copy:
         src: "~/.aws/credentials"
         dest: "~/.aws/"
     
     # - name: Tag image
     #   command: docker tag minecraft_server roysahar11/roysahar-cicd-final-exe:latest
-    - shell: "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 992382545251.dkr.ecr.us-east-1.amazonaws.com"
+    - name: Push image to AWS ECR
+      shell: "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 992382545251.dkr.ecr.us-east-1.amazonaws.com"
     - command: "docker tag roysahar-ecr/minecraft_server:latest 992382545251.dkr.ecr.us-east-1.amazonaws.com/roysahar-ecr/minecraft_server:latest"
     - command: "docker push 992382545251.dkr.ecr.us-east-1.amazonaws.com/roysahar-ecr/minecraft_server:latest"
+
+    - name: Start docker container
+      docker_container:
+        name: minecraft_server
+        image: roysahar-ecr/minecraft_server
+        state: started
+        recreate: yes
+        # links:
+        # - "myredis:aliasedredis"
+        # devices:
+        # - "/dev/sda:/dev/xvda:rwm"
+        volumes:
+        - /minecraft_server:/minecraft_server
+        ports:
+        - "25565:25565"
+        env:
+            EULA: "true"
